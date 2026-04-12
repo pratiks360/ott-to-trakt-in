@@ -130,13 +130,25 @@ function App() {
       query: query
     };
 
-    const response = await fetch("https://apis.justwatch.com/graphql", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
+    // Use a CORS proxy so GitHub Pages doesn't get blocked by JustWatch's strict origin policy.
+    const proxyUrl = "https://corsproxy.io/?";
+    const targetUrl = "https://apis.justwatch.com/graphql";
 
-    if (!response.ok) throw new Error(`JustWatch API Error: ${response.status}`);
+    let response;
+    try {
+      response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      throw new Error("Network error fetching JustWatch (CORS or Proxy blocked). Try running the app locally or check proxy status.");
+    }
+
+    if (!response.ok) {
+       const errText = await response.text();
+       throw new Error(`JustWatch API Error: ${response.status} - ${errText}`);
+    }
     const data = await response.json();
     const edges = data.data?.popularTitles?.edges || [];
     
