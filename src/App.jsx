@@ -114,7 +114,7 @@ function App() {
 
   const fetchJustWatchType = async (packageCode, type, count) => {
     const query = `
-    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = TRENDING, $first: Int! = ${count}, $language: Language!) {
+    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = POPULAR, $first: Int! = ${count}, $language: Language!) {
       popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
         edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
       }
@@ -126,8 +126,12 @@ function App() {
         country: settings.country || "IN",
         language: settings.language || "en",
         first: Number(count),
-        popularTitlesFilter: { packages: [packageCode], objectTypes: [type] },
-        popularTitlesSortBy: "TRENDING"
+        popularTitlesFilter: { 
+          packages: [packageCode], 
+          objectTypes: [type],
+          monetizationTypes: ["FLATRATE", "FREE", "ADS"]
+        },
+        popularTitlesSortBy: "POPULAR"
       },
       query: query
     };
