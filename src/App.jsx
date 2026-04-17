@@ -4,24 +4,26 @@ import './index.css';
 const defaultPlatforms = [
   { id: 'nfx', name: 'Netflix', package: 'nfx', listSlug: 'netflix-india' },
   { id: 'prv', name: 'Amazon Prime', package: 'prv', listSlug: 'prime-india' },
-  { id: 'dhs', name: 'JioHotstar', package: 'dhs', listSlug: 'hotstar-india' },
+  { id: 'jhs', name: 'JioHotstar', package: 'jhs', listSlug: 'hotstar-india' },
   { id: 'zee', name: 'Zee5', package: 'zee', listSlug: 'zee5-india' },
   { id: 'snl', name: 'Sony Liv', package: 'snl', listSlug: 'sonyliv-india' },
-  
   { id: 'atp', name: 'Apple TV', package: 'atp', listSlug: 'appletv-india' }
 ];
 
 function App() {
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('traktSyncSettings');
-    return saved ? JSON.parse(saved) : {
+    const defaultSettings = {
       username: '',
       clientId: '',
       clientSecret: '',
       authCode: '',
       accessToken: '',
-      itemsCount: 10
+      itemsCount: 10,
+      country: 'IN',
+      language: 'en'
     };
+    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
 
   const [platforms, setPlatforms] = useState(() => {
@@ -112,7 +114,7 @@ function App() {
 
   const fetchJustWatchType = async (packageCode, type, count) => {
     const query = `
-    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = TRENDING, $first: Int! = 40, $language: Language!) {
+    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = TRENDING, $first: Int! = ${count}, $language: Language!) {
       popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
         edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
       }
@@ -121,8 +123,8 @@ function App() {
     const payload = {
       operationName: "GetPopularTitles",
       variables: {
-        country: "IN",
-        language: "en",
+        country: settings.country || "IN",
+        language: settings.language || "en",
         first: Number(count),
         popularTitlesFilter: { packages: [packageCode], objectTypes: [type] },
         popularTitlesSortBy: "TRENDING"
@@ -412,6 +414,17 @@ function App() {
                 )}
               </label>
               <input type="password" name="authCode" placeholder="Paste the PIN here" value={settings.authCode} onChange={handleSettingsChange} />
+            </div>
+
+            <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <label>Country Code (e.g. IN, US)</label>
+                <input type="text" name="country" placeholder="IN" value={settings.country} onChange={handleSettingsChange} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Language (e.g. en, fr)</label>
+                <input type="text" name="language" placeholder="en" value={settings.language} onChange={handleSettingsChange} />
+              </div>
             </div>
 
             <div className="form-group">
