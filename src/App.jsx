@@ -115,59 +115,82 @@ function App() {
 
   const fetchJustWatchType = async (packageCode, type, count) => {
     const currentSort = settings.sortBy || "POPULAR";
-    const query = `
-    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = ${currentSort}, $first: Int! = ${count}, $language: Language!) {
-      popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
-        edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
-      }
-    }`;
+    
+    const fetchWithSort = async (sortValue) => {
+      const query = `
+      query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = ${sortValue}, $first: Int! = ${count}, $language: Language!) {
+        popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
+          edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
+        }
+      }`;
 
-    const payload = {
-      operationName: "GetPopularTitles",
-      variables: {
-        country: settings.country || "IN",
-        language: settings.language || "en",
-        first: Number(count),
-        popularTitlesFilter: { 
-          packages: [packageCode], 
-          objectTypes: [type],
-          monetizationTypes: ["FLATRATE", "FREE", "ADS"]
+      const payload = {
+        operationName: "GetPopularTitles",
+        variables: {
+          country: settings.country || "IN",
+          language: settings.language || "en",
+          first: Number(count),
+          popularTitlesFilter: { 
+            packages: [packageCode], 
+            objectTypes: [type],
+            monetizationTypes: ["FLATRATE", "FREE", "ADS"]
+          },
+          popularTitlesSortBy: sortValue
         },
-        popularTitlesSortBy: currentSort
-      },
-      query: query
+        query: query
+      };
+
+      const proxyUrl = "https://corsproxy.io/?";
+      const targetUrl = "https://apis.justwatch.com/graphql";
+
+      let response;
+      try {
+        response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        throw new Error("Network error fetching JustWatch (CORS or Proxy blocked). Try running the app locally or check proxy status.");
+      }
+
+      if (!response.ok) {
+         const errText = await response.text();
+         throw new Error(`JustWatch API Error: ${response.status} - ${errText}`);
+      }
+      const data = await response.json();
+      const edges = data.data?.popularTitles?.edges || [];
+      
+      return edges.map(edge => {
+        const content = edge.node?.content || {};
+        return {
+          title: content.title,
+          tmdb_id: content.externalIds?.tmdbId,
+          imdb_id: content.externalIds?.imdbId
+        };
+      }).filter(m => m.tmdb_id || m.imdb_id);
     };
 
-    // Use a CORS proxy so GitHub Pages doesn't get blocked by JustWatch's strict origin policy.
-    const proxyUrl = "https://corsproxy.io/?";
-    const targetUrl = "https://apis.justwatch.com/graphql";
-
-    let response;
-    try {
-      response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      throw new Error("Network error fetching JustWatch (CORS or Proxy blocked). Try running the app locally or check proxy status.");
+    if (currentSort === "BOTH_MERGED") {
+      const [popular, trending] = await Promise.all([
+        fetchWithSort("POPULAR"),
+        fetchWithSort("TRENDING")
+      ]);
+      const merged = [...popular, ...trending];
+      
+      const unique = [];
+      const seen = new Set();
+      for (const item of merged) {
+        const key = item.tmdb_id ? `tmdb_${item.tmdb_id}` : `imdb_${item.imdb_id}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(item);
+        }
+      }
+      return unique;
+    } else {
+      return fetchWithSort(currentSort);
     }
-
-    if (!response.ok) {
-       const errText = await response.text();
-       throw new Error(`JustWatch API Error: ${response.status} - ${errText}`);
-    }
-    const data = await response.json();
-    const edges = data.data?.popularTitles?.edges || [];
-    
-    return edges.map(edge => {
-      const content = edge.node?.content || {};
-      return {
-        title: content.title,
-        tmdb_id: content.externalIds?.tmdbId,
-        imdb_id: content.externalIds?.imdbId
-      };
-    }).filter(m => m.tmdb_id || m.imdb_id);
   };
 
   const pushToTrakt = async (movies, shows, listSlug, accessToken) => {
@@ -443,6 +466,7 @@ function App() {
                 <select name="sortBy" value={settings.sortBy || 'POPULAR'} onChange={handleSettingsChange}>
                   <option value="POPULAR">Popular (Catalog)</option>
                   <option value="TRENDING">Trending (Hype)</option>
+                  <option value="BOTH_MERGED">Both (Merged & Unique)</option>
                 </select>
               </div>
             </div>
