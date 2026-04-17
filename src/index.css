@@ -161,7 +161,7 @@ label {
   text-transform: uppercase;
 }
 
-input {
+input, select {
   width: 100%;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
@@ -173,10 +173,15 @@ input {
   transition: all 0.3s;
 }
 
-input:focus {
+input:focus, select:focus {
   outline: none;
   border-color: var(--accent-color);
   box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+}
+
+select option {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
 }
 
 .accent-link {

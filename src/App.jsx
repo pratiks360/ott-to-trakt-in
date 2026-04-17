@@ -21,7 +21,8 @@ function App() {
       accessToken: '',
       itemsCount: 10,
       country: 'IN',
-      language: 'en'
+      language: 'en',
+      sortBy: 'POPULAR'
     };
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
   });
@@ -113,8 +114,9 @@ function App() {
   };
 
   const fetchJustWatchType = async (packageCode, type, count) => {
+    const currentSort = settings.sortBy || "POPULAR";
     const query = `
-    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = POPULAR, $first: Int! = ${count}, $language: Language!) {
+    query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = ${currentSort}, $first: Int! = ${count}, $language: Language!) {
       popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
         edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
       }
@@ -131,7 +133,7 @@ function App() {
           objectTypes: [type],
           monetizationTypes: ["FLATRATE", "FREE", "ADS"]
         },
-        popularTitlesSortBy: "POPULAR"
+        popularTitlesSortBy: currentSort
       },
       query: query
     };
@@ -431,9 +433,18 @@ function App() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label>Items to Fetch (Per Type: Movies / TV Shows)</label>
-              <input type="number" name="itemsCount" value={settings.itemsCount} onChange={handleSettingsChange} min="1" max="100" />
+            <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <label>Items to Fetch</label>
+                <input type="number" name="itemsCount" value={settings.itemsCount} onChange={handleSettingsChange} min="1" max="100" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Algorithm Sort By</label>
+                <select name="sortBy" value={settings.sortBy || 'POPULAR'} onChange={handleSettingsChange}>
+                  <option value="POPULAR">Popular (Catalog)</option>
+                  <option value="TRENDING">Trending (Hype)</option>
+                </select>
+              </div>
             </div>
 
             <div className="modal-actions">
