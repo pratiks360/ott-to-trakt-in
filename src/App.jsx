@@ -49,8 +49,8 @@ function App() {
     localStorage.setItem('traktSyncPlatforms', JSON.stringify(platforms));
   }, [platforms]);
 
-  const addLog = (text, type = 'success') => {
-    setLogs(prev => [...prev, { id: Date.now() + Math.random(), type, text }]);
+  const addLog = (text, type = 'success', items = null) => {
+    setLogs(prev => [...prev, { id: Date.now() + Math.random(), type, text, items }]);
   };
 
   useEffect(() => {
@@ -120,7 +120,7 @@ function App() {
       const query = `
       query GetPopularTitles($country: Country!, $popularTitlesFilter: TitleFilter, $popularTitlesSortBy: PopularTitlesSorting! = ${sortValue}, $first: Int! = ${count}, $language: Language!) {
         popularTitles(country: $country, filter: $popularTitlesFilter, sortBy: $popularTitlesSortBy, first: $first) {
-          edges { node { content(country: $country, language: $language) { title externalIds { tmdbId imdbId } } } }
+          edges { node { content(country: $country, language: $language) { title fullPath posterUrl externalIds { tmdbId imdbId } } } }
         }
       }`;
 
@@ -165,6 +165,8 @@ function App() {
         const content = edge.node?.content || {};
         return {
           title: content.title,
+          fullPath: content.fullPath,
+          posterUrl: content.posterUrl,
           tmdb_id: content.externalIds?.tmdbId,
           imdb_id: content.externalIds?.imdbId
         };
@@ -272,7 +274,7 @@ function App() {
     const result = await addResponse.json();
     const addedMovies = result.added?.movies || 0;
     const addedShows = result.added?.shows || 0;
-    addLog(`Success on ${listSlug}! Added ${addedMovies} Movies and ${addedShows} Shows.`, "success");
+    addLog(`Success on ${listSlug}! Added ${addedMovies} Movies and ${addedShows} Shows.`, "success", [...movies, ...shows]);
   };
 
   const doSyncPlatform = async (platform, token) => {
@@ -400,10 +402,39 @@ function App() {
         <div className="log-header">Global Sync Terminal</div>
         <div className="log-content full">
           {logs.map(log => (
-            <p key={log.id} className={log.type}>
-              <span style={{ opacity: 0.5, marginRight: '8px' }}>&gt;</span>
-              {log.text}
-            </p>
+            <div key={log.id} className="log-entry">
+              <p className={log.type}>
+                <span style={{ opacity: 0.5, marginRight: '8px' }}>&gt;</span>
+                {log.text}
+              </p>
+              {log.items && log.items.length > 0 && (
+                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', padding: '8px 0', marginTop: '4px', scrollbarWidth: 'thin' }}>
+                  {log.items.map((item, i) => {
+                    if (!item.posterUrl) return null;
+                    const cleanUrl = item.posterUrl.replace('{profile}', 's166').replace('{format}', 'webp');
+                    const link = item.imdb_id ? `https://www.imdb.com/title/${item.imdb_id}/` : `https://www.justwatch.com${item.fullPath}`;
+                    return (
+                      <a 
+                        key={i} 
+                        href={link}
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        title={item.title}
+                        style={{ flexShrink: 0, transition: 'transform 0.2s', display: 'block' }}
+                        onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <img 
+                          src={`https://images.justwatch.com${cleanUrl}`} 
+                          alt={item.title} 
+                          style={{ height: '90px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           ))}
           <div ref={logEndRef} />
         </div>
