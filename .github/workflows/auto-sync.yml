@@ -1,0 +1,30 @@
+name: Auto Sync OTT → Trakt
+
+on:
+  schedule:
+    - cron: '0 6 * * *'     # Daily at 6:00 AM UTC (10:00 AM IST)
+  workflow_dispatch:          # Allow manual trigger from Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout auto-sync branch
+        uses: actions/checkout@v4
+        with:
+          ref: auto-sync
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Run OTT → Trakt Sync
+        env:
+          TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          TRAKT_ACCESS_TOKEN: ${{ secrets.TRAKT_ACCESS_TOKEN }}
+          TRAKT_REFRESH_TOKEN: ${{ secrets.TRAKT_REFRESH_TOKEN }}
+        run: node sync.mjs
