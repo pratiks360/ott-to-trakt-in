@@ -126,7 +126,10 @@ async function fetchJustWatchType(packageCode, type, count, config) {
     // Server-side: call JustWatch directly, no CORS proxy needed
     const response = await fetch("https://apis.justwatch.com/graphql", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "ott-to-trakt-sync/1.0",
+      },
       body: JSON.stringify(payload),
     });
 
@@ -191,7 +194,10 @@ async function refreshTraktToken(secrets) {
 
   const response = await fetch("https://api.trakt.tv/oauth/token", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "ott-to-trakt-sync/1.0",
+    },
     body: JSON.stringify({
       refresh_token: secrets.refreshToken,
       client_id: secrets.clientId,
@@ -224,6 +230,7 @@ async function refreshTraktToken(secrets) {
 function traktHeaders(clientId, accessToken) {
   return {
     "Content-Type": "application/json",
+    "User-Agent": "ott-to-trakt-sync/1.0",
     "trakt-api-version": "2",
     "trakt-api-key": clientId,
     Authorization: `Bearer ${accessToken}`,

@@ -42,7 +42,10 @@ console.log("\n⏳ Exchanging PIN for tokens...\n");
 
 const response = await fetch("https://api.trakt.tv/oauth/token", {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "User-Agent": "ott-to-trakt-sync/1.0",
+  },
   body: JSON.stringify({
     code: pinCode.trim(),
     client_id: clientId.trim(),
