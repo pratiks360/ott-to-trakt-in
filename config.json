@@ -1,0 +1,15 @@
+{
+  "username": "pratiks360",
+  "country": "IN",
+  "language": "en",
+  "itemsCount": 30,
+  "sortBy": "POPULAR",
+  "platforms": [
+    { "name": "Netflix", "package": "nfx", "listSlug": "netflix-india" },
+    { "name": "Amazon Prime", "package": "prv", "listSlug": "prime-india" },
+    { "name": "JioHotstar", "package": "jhs", "listSlug": "hotstar-india" },
+    { "name": "Zee5", "package": "zee", "listSlug": "zee5-india" },
+    { "name": "Sony Liv", "package": "snl", "listSlug": "sonyliv-india" },
+    { "name": "Apple TV", "package": "atp", "listSlug": "appletv-india" }
+  ]
+}
