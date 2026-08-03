@@ -22,9 +22,19 @@ jobs:
           node-version: '24'
 
       - name: Run OTT → Trakt Sync
+        id: sync_step
         env:
           TRAKT_CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
           TRAKT_ACCESS_TOKEN: ${{ secrets.TRAKT_ACCESS_TOKEN }}
           TRAKT_REFRESH_TOKEN: ${{ secrets.TRAKT_REFRESH_TOKEN }}
         run: node sync.mjs
+
+      - name: Update GitHub Secrets on Token Refresh
+        if: steps.sync_step.outputs.refreshed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        run: |
+          gh secret set TRAKT_ACCESS_TOKEN -b"${{ steps.sync_step.outputs.access_token }}"
+          gh secret set TRAKT_REFRESH_TOKEN -b"${{ steps.sync_step.outputs.refresh_token }}"
+
