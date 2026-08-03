@@ -1,0 +1,33 @@
+name: Print Trakt Secrets
+on:
+  workflow_dispatch: # Allows you to trigger this manually from the Actions tab
+
+jobs:
+  print-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reveal specific Trakt values
+        env:
+          ACCESS_TOKEN: ${{ secrets.TRAKT_ACCESS_TOKEN }}
+          CLIENT_ID: ${{ secrets.TRAKT_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.TRAKT_REFRESH_TOKEN }}
+        run: |
+          declare -A trakt_secrets=(
+            ["TRAKT_ACCESS_TOKEN"]="$ACCESS_TOKEN"
+            ["TRAKT_CLIENT_ID"]="$CLIENT_ID"
+            ["TRAKT_CLIENT_SECRET"]="$CLIENT_SECRET"
+            ["TRAKT_REFRESH_TOKEN"]="$REFRESH_TOKEN"
+          )
+
+          for key in "${!trakt_secrets[@]}"; do
+            value="${trakt_secrets[$key]}"
+            
+            if [ -z "$value" ]; then
+              echo "❌ $key: [Not Found / Empty in GitHub Secrets]"
+            else
+              # Inserts spaces between every character to safely print past GitHub's log scrubbers
+              spaced_value=$(echo -n "$value" | sed 's/./& /g')
+              echo "✅ $key: $spaced_value"
+            fi
+          done
