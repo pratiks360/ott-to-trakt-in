@@ -13,7 +13,7 @@
  *   TRAKT_REFRESH_TOKEN  (optional, used for auto-refresh on 401)
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, appendFileSync } from "node:fs";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -217,12 +217,25 @@ async function refreshTraktToken(secrets) {
 
   const data = await response.json();
   log("Token refreshed successfully!", "SUCCESS");
-  log(
-    "ACTION REQUIRED: Update these GitHub Secrets for future runs:",
-    "WARN"
-  );
-  log(`  TRAKT_ACCESS_TOKEN  = ${data.access_token}`, "WARN");
-  log(`  TRAKT_REFRESH_TOKEN = ${data.refresh_token}`, "WARN");
+
+  if (process.env.GITHUB_OUTPUT) {
+    try {
+      appendFileSync(
+        process.env.GITHUB_OUTPUT,
+        `refreshed=true\naccess_token=${data.access_token}\nrefresh_token=${data.refresh_token}\n`
+      );
+      log("Refreshed tokens written to GITHUB_OUTPUT.", "SUCCESS");
+    } catch (e) {
+      log(`Failed to write to GITHUB_OUTPUT: ${e.message}`, "WARN");
+    }
+  } else {
+    log(
+      "ACTION REQUIRED: Update these GitHub Secrets for future runs:",
+      "WARN"
+    );
+    log(`  TRAKT_ACCESS_TOKEN  = ${data.access_token}`, "WARN");
+    log(`  TRAKT_REFRESH_TOKEN = ${data.refresh_token}`, "WARN");
+  }
 
   return data.access_token;
 }
@@ -250,9 +263,9 @@ async function pushToTrakt(movies, shows, listSlug, config, secrets, token) {
       `List '${listSlug}' not found. Create it on Trakt first.`
     );
   }
-  if (getRes.status === 401) {
-    // Token might be expired — caller handles refresh
-    const err = new Error("Trakt token expired");
+  if (getRes.status === 401 || getRes.status === 403) {
+    // Token might be expired or forbidden — caller handles refresh
+    const err = new Error(`Trakt token expired or forbidden (${getRes.status})`);
     err.code = "TOKEN_EXPIRED";
     throw err;
   }
@@ -305,6 +318,12 @@ async function pushToTrakt(movies, shows, listSlug, config, secrets, token) {
       shows: formatPayload(shows),
     }),
   });
+
+  if (addRes.status === 401 || addRes.status === 403) {
+    const err = new Error(`Trakt push authentication error (${addRes.status})`);
+    err.code = "TOKEN_EXPIRED";
+    throw err;
+  }
 
   if (!addRes.ok) {
     const errText = await addRes.text();
