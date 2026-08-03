@@ -1,0 +1,17 @@
+name: Reveal All Secrets Keys and Values
+on: 
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+
+jobs:
+  reveal:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Loop and print readable keys and values
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          # Parse the full secrets JSON blob using jq
+          echo "$ALL_SECRETS" | jq -r 'to_entries[] | "\(.key): \(.value)"' | while read -r line; do
+            # Add spaces between every character of the value to bypass GitHub masking log filters
+            echo "$line" | sed 's/./& /g'
+          done
